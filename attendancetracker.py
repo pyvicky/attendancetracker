@@ -1,4 +1,7 @@
+from fastapi import FastAPI, HTTPException
 import sqlite3
+
+app = FastAPI()
 
 def connect_database():
     conn = sqlite3.connect('employees.db')
@@ -8,84 +11,88 @@ def connect_database():
               name TEXT, 
               status TEXT
     )''')
-    conn.commit
+    conn.commit()
     return conn
 
-
-def mark_attendance(conn):
+@app.get("/employees/{emp_id}")
+def get_employee(emp_id: str):
+    conn = connect_database()
     c = conn.cursor()
-    emp_id = input("Enter employee ID: ")
+    c.execute("SELECT * FROM employees WHERE id=?", (emp_id,))
+    emp_details = c.fetchone()
+    conn.close()
+    if emp_details is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return {"id": emp_details[0], "name": emp_details[1], "status": emp_details[2]}
+
+@app.post("/employees/")
+def add_employee(emp_id: str, name: str, status: str = "absent"):
+    if status not in ["present", "absent"]:
+        raise HTTPException(status_code=400, detail = "Invalid status, must be present or absent.")
+    
+    conn = connect_database()
+    c = conn.cursor()
+    c.execute("SELECT * FROM employees where id=?", (emp_id,))
+    if c.fetchone():
+        raise HTTPException(status_code=400, detail="Employee already exists")
+    c.execute("INSERT INTO employees VALUES (?, ?, ?)", (emp_id, name, status))
+    conn.commit()
+    conn.close()
+    return {"message": "Employee added successfully"}
+
+@app.put("/employees/{emp_id}")
+def update_employee(emp_id: str, name: str, status: str):
+    if status not in ["present", "absent"]:
+        raise HTTPException(status_code=400, detail = "Invalid status, must be present or absent")
+    
+    conn = connect_database()
+    c = conn.cursor()
     c.execute("SELECT * FROM employees WHERE id=?", (emp_id,))
     emp_details = c.fetchone()
     if emp_details is None:
-        print("Employee not found!")
-        return
-    emp_name = emp_details[1]
-    attendance = input(f"Is {emp_name} present? (P/A): ").upper()
-    while attendance not in ['P', 'A']:
-        print("Please enter a valid input, P for Present and A for absent")
-        attendance = input(f"Is {emp_name} present? (P/A): ").upper()
-    c.execute("UPDATE employees SET status=? WHERE id=?", (attendance, emp_id))
+        raise HTTPException(status_code=404, detail="Employee not found")
+    c.execute("UPDATE employees SET name=? WHERE id=?", (name, status, emp_id))
     conn.commit()
-    print("Attendance marked successfully!")
+    conn.close()
+    return {"message": "Employee updated successfully"}
 
-
-def view_attendance(conn):
-    c = conn.cursor()
-    print("Attendance Report: ")
-    c.execute("SELECT * FROM employees")
-    for row in c.fetchall():
-        print(f"{row[0]}: {row[2]}")
-    print()
-
-def list_employees(conn):
-    c =  conn.cursor()
-    print("List of Employees: ")
-    c.execute("SELECT * FROM employees")
-    for row in c.fetchall():
-        print(f"{row[0]}: {row[1]}")
-
-
-
-def add_employee(conn):
-    c = conn.cursor()
-    emp_id = input("Enter employee ID: ")
-    c.execute("SELECT * FROM employees where id=?", (emp_id,))
-    if c.fetchone():
-        print("Employee already exists!")
-        return
-    emp_name = input("Enter employee name: ")
-    c.execute("INSERT INTO employees VALUES (?, ?, ?)", (emp_id, emp_name, "Absent"))
-    conn.commit()
-    print("Employee added successfully!")
-
-
-def main():
+@app.delete("/employees/{emp_id}")
+def delete_employees(emp_id: str):
     conn = connect_database()
-    while True:
-        print("1. Mark Attendance")
-        print("2. View attendance report")
-        print("3. List Employees")
-        print("4. Add Employee")
-        print("5. Exit")
+    c =  conn.cursor()
+    c.execute("SELECT * FROM employees WHERE id=?", (emp_id,))
+    if c.fetchone() is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    c.execute("DELETE FROM employees WHERE id=?", (emp_id,))
+    conn.commit()
+    conn.close()
+    return {"message": "Employee deleted successfully"}
 
-        choice = input("Enter your choice: ")
 
-        if choice == '1':
-            mark_attendance(conn)
-        elif choice == '2':
-            view_attendance(conn)
-        elif choice == '3':
-            list_employees(conn)
-        elif choice == '4':
-            add_employee(conn)
-        elif choice == '5':
-            print("Bye!")
-            conn.close()
-            break
 
-        else:
-            print("Invalid choice, please enter a valid number")
 
-if __name__ == "__main__":
-    main()
+
+#def update_employee(conn):
+ #   c = conn.cursor()
+  #  emp_id = input("Enter employee ID: ")
+   # c.execute("SELECT * FROM employees WHERE id=?", (emp_id,))
+    #emp_details = c.fetchone()
+    #if emp_details is None:
+     #   print("Employee not found!")
+      #  return
+    #emp_name = input("Enter updated name: ")
+    #c.execute("UPDATE employees SET name=? WHERE id=?", (emp_name, emp_id))
+    #conn.commit()
+    #print("Employee updated successfully!")
+
+#def delete_employee(conn):
+ #   c = conn.cursor()
+#    emp_id = input("Enter employee ID: ")
+ #   c.execute("SELECT * FROM employees WHERE id=?", (emp_id,))
+ #   if c.fetchone() is None:
+  #      print("Employee not found!")
+   #     return
+   # c.execute("DELETE FROM employees WHERE id=?", (emp_id,))
+   # conn.commit()
+    #print("Employee deleted successfully!")
+
