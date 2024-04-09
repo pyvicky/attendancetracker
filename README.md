@@ -1,7 +1,7 @@
 # Employee Attendance Tracker
 This is a lightweight Employee Management API built with FastAPI and SQlite. It provides basic CRUD(create, read, update, delete) operations for managing employee records.
 
-Endpoints:
+**Endpoints**:
 
 ⦁	GET/employees/{emp_id}: Retrieve employee details by ID.
 
@@ -11,11 +11,11 @@ Endpoints:
 
 ⦁	DELETE/employees/{emp_id}: Delete an employee.
 
-Error Handling:
+**Error Handling:**
 
 The API handles errors such as 404(Not found) and 400(Bad Request) when invalid data is provided.
 
-Run the Dockerfile:
+**Run the Dockerfile:**
 
 ⦁	Go to the folder containing Dockerfile and the source code then try the command: docker build -attendancetracker .
 
